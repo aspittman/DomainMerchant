@@ -1,0 +1,8 @@
+
+
+
+
+BUDGET_PER_DOMAIN = 50
+MIN_SCORE_THRESHOLD = 70
+
+DATABASE_PATH = "data/domains.db"
