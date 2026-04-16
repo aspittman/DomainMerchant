@@ -17,6 +17,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS domains (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         domain TEXT NOT NULL UNIQUE,
+        source TEXT,
         brand_score INTEGER NOT NULL DEFAULT 0,
         seo_score INTEGER NOT NULL DEFAULT 0,
         final_score INTEGER NOT NULL DEFAULT 0,
@@ -59,6 +60,7 @@ def upsert_domain_result(result: dict):
     cursor.execute("""
     INSERT INTO domains (
         domain,
+        source,
         brand_score,
         seo_score,
         final_score,
@@ -70,8 +72,9 @@ def upsert_domain_result(result: dict):
         created_at,
         last_seen_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(domain) DO UPDATE SET
+        source = excluded.source,
         brand_score = excluded.brand_score,
         seo_score = excluded.seo_score,
         final_score = excluded.final_score,
@@ -83,9 +86,10 @@ def upsert_domain_result(result: dict):
         last_seen_at = CURRENT_TIMESTAMP
     """, (
         result["domain"],
+        result.get("source"),
         result["brand_score"],
         result["seo_score"],
-        result["score"],
+        result["score"],  # this maps to final_score
         availability_status,
         result.get("action"),
         is_premium_value,

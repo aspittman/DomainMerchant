@@ -1,8 +1,8 @@
 from data.db import init_db, upsert_domain_result
-from services.domain_finder import get_expired_domains
 from services.availability_checker import check_domain_availability
 from strategies.basic_strategy import evaluate_domain
 from services.alerts import send_sms
+from services.domain_finder import get_all_candidate_domains
 
 def decide_action(result):
     availability = result.get("availability", {})
@@ -70,9 +70,9 @@ def print_result(result):
 
 def run_bot():
     init_db()
-    domains = get_expired_domains()
-
-    print(f"Found {len(domains)} domains\n")
+    
+    candidates = get_all_candidate_domains()
+    print(f"Found {len(candidates)} total candidate domains\n")
 
     buy_candidates = []
     review_domains = []
@@ -80,8 +80,12 @@ def run_bot():
     taken_domains = []
     unknown_domains = []
 
-    for domain in domains:
+    for item in candidates:
+        domain = item["domain"]
+        source = item["source"]
+
         result = evaluate_domain(domain)
+        result["source"] = source
         result["availability"] = check_domain_availability(domain)
 
         action = decide_action(result)
@@ -89,8 +93,9 @@ def run_bot():
 
         upsert_domain_result(result)
 
-        if action == "BUY_CANDIDATE":
+        if action == "BUY_CANDIDATE" and result["availability"]["available"]:
             buy_candidates.append(result)
+            send_sms(f"BUY: {result['domain']} | Score: {result['score']}")
         elif action == "REVIEW":
             review_domains.append(result)
         elif action == "SKIP":
@@ -99,10 +104,7 @@ def run_bot():
             taken_domains.append(result)
         else:
             unknown_domains.append(result)
-
-        if action == "BUY_CANDIDATE" and result["availability"]["available"]:
-            send_sms(f"BUY: {result['domain']} | Score: {result['score']}")
-
+            
     buy_candidates.sort(key=lambda x: x["score"], reverse=True)
     review_domains.sort(key=lambda x: x["score"], reverse=True)
     skipped_domains.sort(key=lambda x: x["score"], reverse=True)
@@ -111,6 +113,8 @@ def run_bot():
 
     print("=== BUY CANDIDATES ===")
     for result in buy_candidates:
+        if result["score"] >= 85:
+            print("🔥 HIGH VALUE DETECTED:", result["domain"])
         print_result(result)
 
     print("\n=== REVIEW MANUALLY ===")

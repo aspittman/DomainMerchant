@@ -1,3 +1,6 @@
+from os import name
+
+
 VOWELS = "aeiou"
 
 COMMERCIAL_KEYWORDS = [
@@ -178,6 +181,18 @@ def awkward_keyword_mashup_penalty(name: str) -> int:
 
     return 0
 
+def too_many_words_penalty(name: str) -> int:
+    words = [
+        "solutions", "marketing", "services", "group", "company"
+    ]
+
+    count = sum(1 for w in words if w in name)
+
+    if count >= 2:
+        return -25
+
+    return 0
+
 def commercial_intent_score(name: str) -> int:
     hits = count_keyword_hits(name)
 
@@ -251,7 +266,8 @@ def score_brand(domain: str) -> int:
         score -= 35
 
     score -= low_trust_pattern_count(name) * 12
-
+    score += too_many_words_penalty(name)
+    
     if looks_typo_like(name):
         score -= 20
 

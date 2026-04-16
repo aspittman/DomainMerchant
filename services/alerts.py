@@ -1,8 +1,6 @@
 from twilio.rest import Client
 
 
-
-
 def send_sms(message: str):
     client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
