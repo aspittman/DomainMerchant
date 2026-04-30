@@ -3,6 +3,7 @@ from services.availability_checker import check_domain_availability
 from strategies.basic_strategy import evaluate_domain
 from services.alerts import send_sms
 from services.domain_finder import get_all_candidate_domains
+from services.email_alerts import send_email_alert
 
 def decide_action(result):
     availability = result.get("availability", {})
@@ -10,14 +11,20 @@ def decide_action(result):
 
     final_score = result["score"]
     brand_score = result["brand_score"]
+    resale = result.get("resale_likelihood_score", 0)
+    obvious_buyer = result.get("obvious_buyer", False)
+    trademark_risk = result.get("trademark_risk", False)
 
     if available is False:
         return "TAKEN"
 
+    if trademark_risk:
+        return "SKIP"
+
     if available is True:
-        if final_score >= 80 and brand_score >= 45:
+        if obvious_buyer and final_score >= 75 and brand_score >= 45 and resale >= 55:
             return "BUY_CANDIDATE"
-        elif final_score >= 40 and brand_score >= 15:
+        elif final_score >= 40 and brand_score >= 25:
             return "REVIEW"
         else:
             return "SKIP"
@@ -96,6 +103,25 @@ def run_bot():
         if action == "BUY_CANDIDATE" and result["availability"]["available"]:
             buy_candidates.append(result)
             send_sms(f"BUY: {result['domain']} | Score: {result['score']}")
+            subject = f"🔥 Domain Buy Candidate: {result['domain']}"
+
+            body = f"""
+        Domain: {result['domain']}
+        Score: {result['score']}
+        Brand Score: {result['brand_score']}
+        SEO Score: {result['seo_score']}
+        Resale Score: {result.get('resale_likelihood_score')}
+        Category: {result.get('category')}
+        Buyer Terms: {result.get('buyer_terms')}
+        Action Terms: {result.get('action_terms')}
+
+        Registration Price: {result['availability'].get('registration_price')}
+        Renewal Price: {result['availability'].get('renew_price')}
+
+        Source: {result.get('source')}
+        """
+            send_email_alert(subject, body)
+            
         elif action == "REVIEW":
             review_domains.append(result)
         elif action == "SKIP":
