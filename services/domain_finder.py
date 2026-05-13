@@ -1,6 +1,7 @@
 import re
 import requests
 from bs4 import BeautifulSoup
+from services.pattern_generator import generate_domains
 
 
 DOMAIN_PATTERN = re.compile(r"\b[a-zA-Z0-9-]+\.(?:com|net|org|io|co)\b")
@@ -75,6 +76,16 @@ def dedupe_candidates(candidates):
 
 def get_all_candidate_domains():
     candidates = []
-    candidates.extend(get_deleted_domains(limit=25))
-    candidates.extend(get_godaddy_closeout_domains(limit=25))
+    candidates.extend(get_deleted_domains(limit=50))
+    candidates.extend(get_godaddy_closeout_domains(limit=50))
+
+    # NEW: generated domains
+    generated = generate_domains(limit=200)
+
+    for domain in generated:
+        candidates.append({
+            "domain": domain,
+            "source": "generated"
+        })
+
     return dedupe_candidates(candidates)

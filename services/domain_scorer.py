@@ -504,28 +504,39 @@ def domain_category(domain: str) -> str:
     return "GENERAL_REVIEW"
 
 
-def score_domain(domain: str, metrics: dict) -> dict:
+def score_domain(domain: str, metrics: dict = None) -> dict:
     name = base_name(domain)
 
     brand_score = score_brand(domain)
-    seo_score = score_seo(metrics)
-    final_score = brand_score + seo_score
-    resale_likelihood = score_resale_likelihood(domain, brand_score, seo_score)
-    pricing = estimate_domain_price(domain, resale_likelihood, brand_score, seo_score)
 
-    obvious_buyer = has_obvious_outreach_angle(name)
+    # No SEO influence anymore
+    seo_score = 0
+    final_score = brand_score
+
+    resale_likelihood = score_resale_likelihood(
+        domain=domain,
+        brand_score=brand_score,
+        seo_score=0
+    )
+
+    pricing = estimate_domain_price(
+        domain=domain,
+        resale_score=resale_likelihood,
+        brand_score=brand_score,
+        seo_score=0
+    )
 
     return {
         "brand_score": brand_score,
-        "seo_score": seo_score,
+        "seo_score": 0,
         "final_score": final_score,
         "resale_likelihood_score": resale_likelihood,
         "low_price": pricing["low_price"],
         "target_price": pricing["target_price"],
         "stretch_price": pricing["stretch_price"],
         "trademark_risk": has_trademark_risk(name),
-        "obvious_buyer": obvious_buyer,
-        "category": domain_category(domain),
+        "obvious_buyer": has_obvious_outreach_angle(name),
         "buyer_terms": money_niche_hits(name),
         "action_terms": action_word_hits(name),
+        "category": domain_category(domain),
     }
